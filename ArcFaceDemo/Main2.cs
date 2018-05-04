@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ using System.Windows.Forms;
 
 namespace FaceRecognization
 {
-    public partial class Main : Form
+    public partial class Main2 : Form
     {
         /// <summary>
         /// 虹软SDK的AppId
@@ -30,7 +31,7 @@ namespace FaceRecognization
         /// <summary>
         /// 摄像头获取的图片和现实的图片的宽度高度比率
         /// </summary>
-        float _RateW, _RateH;
+        float _RateW=1, _RateH=1;
         Font _FontId;
         Pen _PenFace;
         private readonly ReaderWriterLockSlim _CacheLock = new ReaderWriterLockSlim();
@@ -48,12 +49,12 @@ namespace FaceRecognization
         Dictionary<int, string> _MatchId = new Dictionary<int, string>();
         Dictionary<int, Rectangle> _MatchRect = new Dictionary<int, Rectangle>();
 
-        public Main()
+        public Main2()
         {
             InitializeComponent();
         }
 
-
+        long t = 0;
         private void Form1_Load(object sender, EventArgs e)
         {
             //获取摄像头参数
@@ -76,7 +77,7 @@ namespace FaceRecognization
             _PenFace = new Pen(Color.Yellow, 1);
             _PenFace.DashStyle = System.Drawing.Drawing2D.DashStyle.Custom;
             _PenFace.DashPattern = new float[] { 5, 5 };
-            if (!ArcFace.Api.Init(out string msg, AppId, DKey, RKey))
+            if (!ArcFace.MTApi.Init(out string msg, AppId, DKey, RKey))
             {
                 MessageBox.Show(msg);
                 this.Close();
@@ -84,7 +85,7 @@ namespace FaceRecognization
             }
 
 
-            
+
 
             Task.Factory.StartNew(() =>
             {
@@ -94,7 +95,15 @@ namespace FaceRecognization
                     #region 200毫秒左右
                     try
                     {
+                        Stopwatch sw = new Stopwatch();
+                        sw.Start();
                         MatchFrame();
+                        sw.Stop();
+                        t = sw.ElapsedMilliseconds;
+
+                        this.TextBoxID.Invoke(new Action(() => {
+                            this.TextBoxID.Text = t.ToString();
+                        }));
                     }
                     catch
                     {
@@ -112,17 +121,17 @@ namespace FaceRecognization
                 System.Threading.Thread.Sleep(500);
                 this.VideoPlayer.Stop();
 
-                ArcFace.Api.Close();
+                ArcFace.MTApi.Close();
             }
         }
 
         private void VideoPlayer_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.ScaleTransform(_RateW, _RateH);
-            for (int i = 0; i < ArcFace.Api.FaceResults.FaceNumber; i++)
+            for (int i = 0; i < ArcFace.MTApi.FaceResults.FaceNumber; i++)
             {
-                e.Graphics.DrawRectangle(_PenFace, ArcFace.Api.FaceResults[i].Rectangle);
-                e.Graphics.DrawString(ArcFace.Api.FaceResults[i].ID, this._FontId, Brushes.Yellow, ArcFace.Api.FaceResults[i].Rectangle.Location);
+                e.Graphics.DrawRectangle(_PenFace, ArcFace.MTApi.FaceResults[i].Rectangle);
+                e.Graphics.DrawString(t+","+ ArcFace.MTApi.FaceResults[i].ID, this._FontId, Brushes.Red, ArcFace.MTApi.FaceResults[i].Rectangle.Location);
             }
         }
 
@@ -140,18 +149,18 @@ namespace FaceRecognization
                 return;
             }
 
-            if (ArcFace.Api.CheckID(this.TextBoxID.Text))
+            if (ArcFace.MTApi.CheckID(this.TextBoxID.Text))
             {
                 if (MessageBox.Show($"您要替换[{this.TextBoxID.Text}]的人脸数据吗？", "咨询", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1) == DialogResult.No)
                     return;
             }
-            ArcFace.Api.AddFace(this.TextBoxID.Text, _RegisterFeatureData);
+            ArcFace.MTApi.AddFace(this.TextBoxID.Text, _RegisterFeatureData);
         }
 
         private void VideoPlayer_Click(object sender, EventArgs e)
         {
 
-            if (ArcFace.Api.FaceResults.FaceNumber == 1)
+            if (ArcFace.MTApi.FaceResults.FaceNumber == 1)
             {
                 _RegisterIndex = 0;
                 return;
@@ -159,7 +168,7 @@ namespace FaceRecognization
             var p = this.VideoPlayer.PointToClient(Cursor.Position);
             var x = p.X / _RateW;
             var y = p.Y / _RateH;
-            _RegisterIndex = ArcFace.Api.FaceResults.Items.IndexOf(ArcFace.Api.FaceResults.Items.Take(ArcFace.Api.FaceResults.FaceNumber).FirstOrDefault(ii => x >= ii.Rectangle.Left && x <= ii.Rectangle.Right && y >= ii.Rectangle.Top && y <= ii.Rectangle.Bottom));
+            _RegisterIndex = ArcFace.MTApi.FaceResults.Items.IndexOf(ArcFace.MTApi.FaceResults.Items.Take(ArcFace.MTApi.FaceResults.FaceNumber).FirstOrDefault(ii => x >= ii.Rectangle.Left && x <= ii.Rectangle.Right && y >= ii.Rectangle.Top && y <= ii.Rectangle.Bottom));
 
             if (_RegisterIndex == -1)
             {
@@ -170,14 +179,14 @@ namespace FaceRecognization
         private void VideoPlayer_MouseMove(object sender, MouseEventArgs e)
         {
 
-            if (ArcFace.Api.FaceResults.FaceNumber == 1)
+            if (ArcFace.MTApi.FaceResults.FaceNumber == 1)
             {
                 this.VideoPlayer.Cursor = Cursors.Hand;
                 return;
             }
             var x = e.X / _RateW;
             var y = e.Y / _RateH;
-            this.VideoPlayer.Cursor = ArcFace.Api.FaceResults.Items.IndexOf(ArcFace.Api.FaceResults.Items.Take(ArcFace.Api.FaceResults.FaceNumber).FirstOrDefault(ii => x >= ii.Rectangle.Left && x <= ii.Rectangle.Right && y >= ii.Rectangle.Top && y <= ii.Rectangle.Bottom))
+            this.VideoPlayer.Cursor = ArcFace.MTApi.FaceResults.Items.IndexOf(ArcFace.MTApi.FaceResults.Items.Take(ArcFace.MTApi.FaceResults.FaceNumber).FirstOrDefault(ii => x >= ii.Rectangle.Left && x <= ii.Rectangle.Right && y >= ii.Rectangle.Top && y <= ii.Rectangle.Bottom))
               == -1 ? Cursors.Default : Cursors.Hand;
 
         }
@@ -186,18 +195,19 @@ namespace FaceRecognization
         {
 
             var img = this.VideoPlayer.GetCurrentVideoFrame();
-            ArcFace.Api.FaceMatch(img, _RegisterIndex);
 
-            if (_RegisterIndex != -1 && null != ArcFace.Api.FaceResults[_RegisterIndex].FeatureData)
+            ArcFace.MTApi.FaceMatch(img);
+
+            if (_RegisterIndex != -1 && null != ArcFace.MTApi.FaceResults[_RegisterIndex].FeatureData)
             {
-                this._RegisterFeatureData = ArcFace.Api.FaceResults[_RegisterIndex].FeatureData;
+                this._RegisterFeatureData = ArcFace.MTApi.FaceResults[_RegisterIndex].FeatureData;
                 this.Invoke(new Action(() =>
                 {
-                    this.TextBoxID.Text = ArcFace.Api.FaceResults[_RegisterIndex].ID;
-                    this.groupBox1.Text = _RegisterIndex + "：" + ArcFace.Api.FaceResults[_RegisterIndex].Score;
+                    this.TextBoxID.Text = ArcFace.MTApi.FaceResults[_RegisterIndex].ID;
+                    this.groupBox1.Text = _RegisterIndex + "：" + ArcFace.MTApi.FaceResults[_RegisterIndex].Score;
                     using (var g = Graphics.FromImage(img))
                     {
-                        g.DrawRectangle(_PenFace, ArcFace.Api.FaceResults[_RegisterIndex].Rectangle);
+                        g.DrawRectangle(_PenFace, ArcFace.MTApi.FaceResults[_RegisterIndex].Rectangle);
                     }
                     this.pictureBox1.Image = img;
 

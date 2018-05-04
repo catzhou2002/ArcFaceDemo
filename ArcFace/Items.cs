@@ -26,7 +26,7 @@ namespace ArcFace
             /// <summary>
             /// 人脸模型
             /// </summary>
-            public FaceModel FaceModel { get; set; }
+            public FaceModel FaceModel;// { get; set; }
         }
     }
     /// <summary>
@@ -80,7 +80,8 @@ namespace ArcFace
     {
         public string ID { get; set; }
         public System.Drawing.Rectangle Rectangle { get; set; }
-        public byte[] FeatureData { get; set; }
+        public byte[] FeatureData { get; set; } = new byte[22020];
         public float Score { get; set; }
+
     }
 }

@@ -34,6 +34,11 @@ namespace FaceRecognization
         float _RateW=1, _RateH=1;
         Font _FontId;
         Pen _PenFace;
+        /// <summary>
+        /// 识别一次所需时间，单位毫秒
+        /// </summary>
+        long _TS = 0;
+
         private readonly ReaderWriterLockSlim _CacheLock = new ReaderWriterLockSlim();
         System.Threading.CancellationTokenSource _CancellationTokenSource = new System.Threading.CancellationTokenSource();
         /// <summary>
@@ -54,7 +59,6 @@ namespace FaceRecognization
             InitializeComponent();
         }
 
-        long t = 0;
         private void Form1_Load(object sender, EventArgs e)
         {
             //获取摄像头参数
@@ -99,11 +103,9 @@ namespace FaceRecognization
                         sw.Start();
                         MatchFrame();
                         sw.Stop();
-                        t = sw.ElapsedMilliseconds;
+                        _TS = sw.ElapsedMilliseconds;
 
-                        this.TextBoxID.Invoke(new Action(() => {
-                            this.TextBoxID.Text = t.ToString();
-                        }));
+                       
                     }
                     catch
                     {
@@ -131,7 +133,7 @@ namespace FaceRecognization
             for (int i = 0; i < ArcFace.MTApi.FaceResults.FaceNumber; i++)
             {
                 e.Graphics.DrawRectangle(_PenFace, ArcFace.MTApi.FaceResults[i].Rectangle);
-                e.Graphics.DrawString(t+","+ ArcFace.MTApi.FaceResults[i].ID, this._FontId, Brushes.Red, ArcFace.MTApi.FaceResults[i].Rectangle.Location);
+                e.Graphics.DrawString(_TS+","+ ArcFace.MTApi.FaceResults[i].ID, this._FontId, Brushes.Red, ArcFace.MTApi.FaceResults[i].Rectangle.Location);
             }
         }
 

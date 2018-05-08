@@ -15,7 +15,7 @@ using System.Threading;
 namespace ArcFace
 {
     /// <summary>
-    /// 五线程，五张脸
+    /// 四线程
     /// </summary>
     public static class Api
     {

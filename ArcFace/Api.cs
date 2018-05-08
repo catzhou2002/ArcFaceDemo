@@ -9,15 +9,22 @@ using System.ComponentModel;
 using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Diagnostics;
+using System.Threading;
 
 namespace ArcFace
 {
+    /// <summary>
+    /// 五线程，五张脸
+    /// </summary>
     public static class Api
     {
+        const int FeatureSize = 22020;
+        const int TaskNum = 4;
         /// <summary>
         /// 人脸识别结果集
         /// </summary>
-        public static FaceResults FaceResults { get; set; }
+        public static FaceResults CacheFaceResults { get; set; }
         /// <summary>
         /// 人脸检测的缓存
         /// </summary>
@@ -25,7 +32,7 @@ namespace ArcFace
         /// <summary>
         /// 人脸比对的缓存
         /// </summary>
-        private static IntPtr _RBuffer = IntPtr.Zero;
+        private static IntPtr[] _RBuffer = new IntPtr[TaskNum];
         /// <summary>
         /// 人脸检测的引擎
         /// </summary>
@@ -33,12 +40,16 @@ namespace ArcFace
         /// <summary>
         /// 人脸比对的引擎
         /// </summary>
-        private static IntPtr _REngine = IntPtr.Zero;
+        private static IntPtr[] _REngine = new IntPtr[TaskNum];
         private static int _MaxFaceNumber;
-        private static string _FaceDataPath;
-        private static readonly FaceLib _FaceLib = new FaceLib();
+        private static string _FaceDataPath, _FaceImagePath;
+
+        private static readonly FaceLib[] _FaceLib = new FaceLib[TaskNum];
+        private static DetectResult _DetectResult;
+        private static readonly ReaderWriterLockSlim _RWL = new ReaderWriterLockSlim();
+
         /// <summary>
-        /// 初始化
+        /// 初始化，主要用于视频，取消人脸方向参数
         /// </summary>
         /// <param name="appId">虹软SDK的AppId</param>
         /// <param name="dKey">虹软SDK人脸检测的Key</param>
@@ -51,7 +62,7 @@ namespace ArcFace
         /// <param name="rateW">视频图片采集宽度和显示宽度的比值</param>
         /// <param name="message"></param>
         /// <returns></returns>
-        public static bool Init(out string message, string appId, string dKey, string rKey, EOrientPriority orientPriority = EOrientPriority.Ext0, int scale = 16, int maxFaceNumber = 10, string faceDataPath = "d:\\FeatureData")
+        public static bool Init(out string message, string appId, string dKey, string rKey, int scale = 50, int maxFaceNumber = 10, string faceDataPath = "d:\\FeatureData")
         {
             if (scale < 2 || scale > 50)
             {
@@ -60,48 +71,54 @@ namespace ArcFace
             }
             if (maxFaceNumber < 1 || maxFaceNumber > 100)
             {
-                message = "maxFaceNumber的值必须在1-100之间";
+                message = "人脸数量必须在1-100之间";
                 return false;
             }
             _DBuffer = Marshal.AllocCoTaskMem(20 * 1024 * 1024);
-            _RBuffer = Marshal.AllocCoTaskMem(40 * 1024 * 1024);
 
-            var initResult = (ErrorCode)ArcWrapper.DInit(appId, dKey, _DBuffer, 20 * 1024 * 1024, out _DEnginer, (int)orientPriority, scale, maxFaceNumber);
+            var initResult = (ErrorCode)ArcWrapper.DInit(appId, dKey, _DBuffer, 20 * 1024 * 1024, out _DEnginer, (int)ArcFace.EOrientPriority.Only0, scale, maxFaceNumber);
             if (initResult != ErrorCode.Ok)
             {
                 message = $"初始化人脸检测引擎失败，错误代码:{(int)initResult}，错误描述：{ ((DescriptionAttribute)(initResult.GetType().GetCustomAttribute(typeof(DescriptionAttribute), false))).Description}";
                 return false;
             }
-            initResult = (ErrorCode)ArcWrapper.RInit(appId, rKey, _RBuffer, 40 * 1024 * 1024, out _REngine);
-            if (initResult != ErrorCode.Ok)
+            for (int i = 0; i < TaskNum; i++)
             {
-                message = $"初始化人脸比对引擎失败，错误代码:{(int)initResult}，错误描述：{ ((DescriptionAttribute)(initResult.GetType().GetCustomAttribute(typeof(DescriptionAttribute), false))).Description}";
-                return false;
-            }
-
-            FaceResults = new FaceResults(maxFaceNumber);
-
-            _FaceDataPath = faceDataPath;
-            if (!Directory.Exists(faceDataPath))
-                Directory.CreateDirectory(faceDataPath);
-            else
-            {
-                foreach (var file in Directory.GetFiles(faceDataPath))
+                _RBuffer[i] = Marshal.AllocCoTaskMem(40 * 1024 * 1024);
+                initResult = (ErrorCode)ArcWrapper.RInit(appId, rKey, _RBuffer[i], 40 * 1024 * 1024, out _REngine[i]);
+                if (initResult != ErrorCode.Ok)
                 {
-                    var info = new FileInfo(file);
-                    var data = File.ReadAllBytes(file);
-                    var faceModel = new FaceModel
-                    {
-                        lFeatureSize = data.Length,
-                        pbFeature = Marshal.AllocCoTaskMem(data.Length)
-                    };
-
-                    Marshal.Copy(data, 0, faceModel.pbFeature, data.Length);
-                    _FaceLib.Items.Add(new FaceLib.Item() { OrderId = 0, ID = info.Name.Replace(info.Extension, ""), FaceModel = faceModel });
+                    message = $"初始化人脸比对引擎失败，错误代码:{(int)initResult}，错误描述：{ ((DescriptionAttribute)(initResult.GetType().GetCustomAttribute(typeof(DescriptionAttribute), false))).Description}";
+                    return false;
                 }
 
+                _FaceLib[i] = new FaceLib();
             }
+
+            CacheFaceResults = new FaceResults(maxFaceNumber);
             _MaxFaceNumber = maxFaceNumber;
+
+            _FaceDataPath = faceDataPath;
+            _FaceImagePath = Path.Combine(_FaceDataPath, "Image");
+            if (!Directory.Exists(faceDataPath))
+                Directory.CreateDirectory(faceDataPath);
+            if (!Directory.Exists(_FaceImagePath))
+                Directory.CreateDirectory(_FaceImagePath);
+
+            int index = 0;
+            //for (int i = 0; i < 100; i++)
+
+            foreach (var file in Directory.GetFiles(faceDataPath))
+            {
+                var info = new FileInfo(file);
+                var data = File.ReadAllBytes(file);
+                var pFeature = Marshal.AllocCoTaskMem(data.Length);
+                Marshal.Copy(data, 0, pFeature, data.Length);
+                _FaceLib[index % TaskNum].Items.Add(new FaceLib.Item() { OrderId = 0, ID = info.Name.Replace(info.Extension, ""), FaceModel = new FaceModel { lFeatureSize = FeatureSize, pbFeature = pFeature } });
+                index++;
+
+            }
+
             message = "初始化成功";
             return true;
         }
@@ -112,29 +129,39 @@ namespace ArcFace
                 ArcWrapper.DClose(_DEnginer);
                 _DEnginer = IntPtr.Zero;
             }
-            if (_REngine != IntPtr.Zero)
-            {
-                ArcWrapper.RClose(_REngine);
-                _REngine = IntPtr.Zero;
-            }
             if (_DBuffer != IntPtr.Zero)
             {
                 Marshal.FreeCoTaskMem(_DBuffer);
                 _DBuffer = IntPtr.Zero;
-                Marshal.FreeCoTaskMem(_RBuffer);
-                _RBuffer = IntPtr.Zero;
             }
-            foreach (var item in _FaceLib.Items)
+            for (int i = 0; i < TaskNum; i++)
             {
-                Marshal.FreeCoTaskMem(item.FaceModel.pbFeature);
+                if (_REngine[i] != IntPtr.Zero)
+                {
+                    ArcWrapper.RClose(_REngine[i]);
+                    _REngine[i] = IntPtr.Zero;
+                }
+                if (_RBuffer[i] != IntPtr.Zero)
+                {
+
+                    Marshal.FreeCoTaskMem(_RBuffer[i]);
+                    _RBuffer[i] = IntPtr.Zero;
+                }
+                foreach (var item in _FaceLib[i].Items)
+                {
+                    Marshal.FreeCoTaskMem(item.FaceModel.pbFeature);
+                }
             }
+
+
         }
+
+
         /// <summary>
         /// 人脸比对
         /// </summary>
         /// <param name="bitmap">输入图片</param>
-        /// <param name="featureDataIndex">需要转换人脸特征的序号</param>
-        public static void FaceMatch(Bitmap bitmap, int featureDataIndex = -1)
+        public static void FaceMatch(Bitmap bitmap)
         {
 
             var bmpData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
@@ -158,57 +185,101 @@ namespace ArcFace
                 if (ret != ErrorCode.Ok)
                     return;
 
-                var detectResult = Marshal.PtrToStructure<DetectResult>(pDetectResult);
+                _DetectResult = Marshal.PtrToStructure<DetectResult>(pDetectResult);
 
-                FaceResults.FaceNumber = detectResult.nFace;
-                if (detectResult.nFace == 0)
+                CacheFaceResults.FaceNumber = _DetectResult.nFace;
+                for (int i = _DetectResult.nFace; i < _MaxFaceNumber; i++)
+                {
+                    CacheFaceResults[i].ID = "";
+                }
+                if (_DetectResult.nFace == 0)
                     return;
 
-
-                for (int i = 0; i < detectResult.nFace; i++)
+                for (int i = 0; i < _DetectResult.nFace; i++)
                 {
-                    IntPtr p = new IntPtr(detectResult.rcFace.ToInt32() + i * Marshal.SizeOf<FaceRect>());
-                    var faceRect = Marshal.PtrToStructure<FaceRect>(p);
-                    FaceResults[i].Rectangle = new Rectangle(faceRect.left, faceRect.top, faceRect.right - faceRect.left, faceRect.bottom - faceRect.top);
-
-                    p = new IntPtr(detectResult.lfaceOrient.ToInt32() + i * Marshal.SizeOf<int>());
-                    var faceOrient = Marshal.PtrToStructure<int>(p);
-
-                    var faceFeatureInput = new FaceFeatureInput
-                    {
-                        rcFace = faceRect,
-                        lOrient = faceOrient
-                    };
-                    if ((ErrorCode)ArcWrapper.ExtractFeature(_REngine, ref imageData, ref faceFeatureInput, out var faceModel) != ErrorCode.Ok)
-                        continue;
-
-
-                    if (featureDataIndex == i)
-                    {
-                        if (FaceResults[i].FeatureData == null)
-                            FaceResults[i].FeatureData = new byte[faceModel.lFeatureSize];
-                        Marshal.Copy(faceModel.pbFeature, FaceResults[i].FeatureData, 0, faceModel.lFeatureSize);
-                    }
-                    bool matched = false;
-                    foreach (var item in _FaceLib.Items.OrderByDescending(ii => ii.OrderId))
-                    {
-                        var fm = item.FaceModel;
-                        ArcWrapper.Match(_REngine, ref fm, ref faceModel, out float score);
-                        if (score > 0.5)
-                        {
-                            matched = true;
-                            item.OrderId = DateTime.Now.Ticks;
-                            FaceResults[i].ID = item.ID;
-                            FaceResults[i].Score = score;
-                            break;
-                        }
-                    }
-                    if (!matched)
-                    {
-                        FaceResults[i].ID = "不认识";
-                        FaceResults[i].Score = 0;
-                    }
+                    CacheFaceResults[i].Rect = Marshal.PtrToStructure<FaceRect>(IntPtr.Add(_DetectResult.rcFace, i * Marshal.SizeOf<FaceRect>()));
                 }
+
+                Task[] ts = new Task[TaskNum];
+
+                int faceOffset = -1;
+                for (int i = 0; i < TaskNum; i++)
+                {
+                    var rEngine = _REngine[i];
+                    ts[i] = Task.Factory.StartNew(() =>
+                    {
+                        while (true)
+                        {
+                            var faceIndex = Interlocked.Increment(ref faceOffset);
+                            if (faceIndex >= _DetectResult.nFace)
+                                break;
+
+                            var ffi = new FaceFeatureInput
+                            {
+                                rcFace = CacheFaceResults.Items[faceIndex].Rect,
+                                lOrient = 1
+                            };
+                            ArcWrapper.ExtractFeature(rEngine, ref imageData, ref ffi, out var fm);//.  var fm);
+                            Marshal.Copy(fm.pbFeature, CacheFaceResults.Items[faceIndex].FeatureData, 0, FeatureSize);
+                        }
+                    });
+                }
+                Task.WaitAll(ts);
+                List<int> noMatchFaces = Enumerable.Range(0, _DetectResult.nFace).ToList();
+                for (int i = 0; i < TaskNum; i++)
+                {
+                    var taskIndex = i;
+                    ts[i] = Task.Factory.StartNew(() =>
+                    {
+                        var rEngine = _REngine[taskIndex];
+                        FaceModel[] fms = new FaceModel[_DetectResult.nFace];
+                        for (int faceIndex = 0; faceIndex < _DetectResult.nFace; faceIndex++)
+                        {
+                            fms[faceIndex] = new FaceModel()
+                            {
+                                lFeatureSize = FeatureSize,
+                                pbFeature = Marshal.AllocCoTaskMem(FeatureSize)
+                            };
+                            Marshal.Copy(CacheFaceResults.Items[faceIndex].FeatureData, 0, fms[faceIndex].pbFeature, FeatureSize);
+                        }
+                        foreach (var item in _FaceLib[taskIndex].Items.OrderByDescending(ii => ii.OrderId))//.Skip(faceModelCount * taskIndex).Take(faceModelCount))
+                        {
+                            _RWL.EnterReadLock();
+                            if (noMatchFaces.Count == 0)
+                            {
+                                _RWL.ExitReadLock();
+                                break;
+                            }
+                            var faceIndexs = noMatchFaces.ToList();
+                            _RWL.ExitReadLock();
+
+                            foreach (var faceIndex in faceIndexs)
+                            {
+                                ArcWrapper.Match(rEngine, ref fms[faceIndex], ref item.FaceModel, out float score);
+
+                                if (score > 0.55)
+                                {
+                                    CacheFaceResults[faceIndex].ID = item.ID;
+                                    CacheFaceResults[faceIndex].Score = score;
+                                    item.OrderId = DateTime.Now.Ticks;
+                                    _RWL.EnterWriteLock();
+                                    noMatchFaces.Remove(faceIndex);
+                                    _RWL.ExitWriteLock();
+                                }
+                            }
+                        }
+                    });
+
+                }
+
+                Task.WaitAll(ts);
+                foreach (var faceIndex in noMatchFaces)
+                {
+                    CacheFaceResults[faceIndex].ID = "";
+                    CacheFaceResults[faceIndex].Score = 0;
+                }
+
+
             }
             finally
             {
@@ -216,14 +287,20 @@ namespace ArcFace
             }
 
         }
+
         public static bool CheckID(string id)
         {
-            return _FaceLib.Items.Count(ii => ii.ID == id) == 1;
+            int count = 0;
+            for (int i = 0; i < TaskNum; i++)
+                count += _FaceLib[i].Items.Count(ii => ii.ID == id);
+            return count > 0;
         }
-        public static void AddFace(string id, byte[] featureData)
+        public static void AddFace(string id, byte[] featureData, Image img)
         {
             var fileName = Path.Combine(_FaceDataPath, id + ".dat");
             System.IO.File.WriteAllBytes(fileName, featureData);
+            fileName = Path.Combine(_FaceImagePath, id + ".bmp");
+            img.Save(fileName);
             var faceModel = new FaceModel
             {
                 lFeatureSize = featureData.Length,
@@ -231,7 +308,7 @@ namespace ArcFace
             };
 
             Marshal.Copy(featureData, 0, faceModel.pbFeature, featureData.Length);
-            _FaceLib.Items.Add(new FaceLib.Item() { OrderId = DateTime.Now.Ticks, ID = id, FaceModel = faceModel });
+            _FaceLib[0].Items.Add(new FaceLib.Item() { OrderId = DateTime.Now.Ticks, ID = id, FaceModel = faceModel });
         }
     }
 }

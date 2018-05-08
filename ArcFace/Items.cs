@@ -36,13 +36,14 @@ namespace ArcFace
     {
         public List<FaceResult> Items { get; set; }
         public int FaceNumber { get; set; }
-
+        internal List<ArcFace.FaceModel> fms = new List<FaceModel>();
         public FaceResults(int maxFaceNumber)
         {
             Items = new List<FaceResult>();
             for (int i = 0; i < maxFaceNumber; i++)
             {
                 Items.Add(new FaceResult());
+                fms.Add(new FaceModel());
             }
         }
         public FaceResult this[int index]
@@ -56,21 +57,6 @@ namespace ArcFace
                 Items[index] = value;
             }
         }
-        public List<FaceResult> ItemsClone()
-        {
-            List<FaceResult> ret = new List<FaceResult>();
-
-            for (int i = 0; i < FaceNumber; i++)
-            {
-                ret.Add(new FaceResult()
-                {
-                    FeatureData = this[i].FeatureData,
-                    ID = this[i].ID,
-                    Rectangle = this[i].Rectangle
-                });
-            }
-            return ret;
-        }
 
     }
     /// <summary>
@@ -79,9 +65,15 @@ namespace ArcFace
     public class FaceResult
     {
         public string ID { get; set; }
-        public System.Drawing.Rectangle Rectangle { get; set; }
+        public System.Drawing.Rectangle Rectangle
+        {
+            get
+            {
+                return new System.Drawing.Rectangle(Rect.left, Rect.top, Rect.right - Rect.left, Rect.bottom - Rect.top);
+            }
+        }
         public byte[] FeatureData { get; set; } = new byte[22020];
         public float Score { get; set; }
-
+        internal FaceRect Rect;
     }
 }

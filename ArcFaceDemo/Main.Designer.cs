@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.label2 = new System.Windows.Forms.Label();
             this.TextBoxID = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.ButtonRegister = new System.Windows.Forms.Button();
@@ -38,16 +37,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
-            this.label2.Location = new System.Drawing.Point(60, 445);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(223, 14);
-            this.label2.TabIndex = 11;
-            this.label2.Text = "人脸注册：点击视频，输入ID，点击注册";
             // 
             // TextBoxID
             // 
@@ -68,7 +57,7 @@
             // 
             // ButtonRegister
             // 
-            this.ButtonRegister.Location = new System.Drawing.Point(14, 339);
+            this.ButtonRegister.Location = new System.Drawing.Point(14, 346);
             this.ButtonRegister.Name = "ButtonRegister";
             this.ButtonRegister.Size = new System.Drawing.Size(320, 23);
             this.ButtonRegister.TabIndex = 6;
@@ -87,7 +76,10 @@
             // 
             // VideoPlayer
             // 
-            this.VideoPlayer.Location = new System.Drawing.Point(12, 12);
+            this.VideoPlayer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.VideoPlayer.Location = new System.Drawing.Point(12, 19);
             this.VideoPlayer.Name = "VideoPlayer";
             this.VideoPlayer.Size = new System.Drawing.Size(640, 480);
             this.VideoPlayer.TabIndex = 7;
@@ -99,14 +91,14 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.groupBox1.Controls.Add(this.pictureBox1);
-            this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.TextBoxID);
             this.groupBox1.Controls.Add(this.ButtonRegister);
             this.groupBox1.Controls.Add(this.label1);
-            this.groupBox1.Location = new System.Drawing.Point(671, 12);
+            this.groupBox1.Location = new System.Drawing.Point(686, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(350, 480);
+            this.groupBox1.Size = new System.Drawing.Size(350, 407);
             this.groupBox1.TabIndex = 12;
             this.groupBox1.TabStop = false;
             // 
@@ -114,11 +106,11 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1046, 511);
+            this.ClientSize = new System.Drawing.Size(1048, 511);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.VideoPlayer);
             this.Name = "Main";
-            this.Text = "ArcFace人脸识别+注册";
+            this.Text = "人脸识别";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
@@ -129,8 +121,6 @@
         }
 
         #endregion
-
-        private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox TextBoxID;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button ButtonRegister;

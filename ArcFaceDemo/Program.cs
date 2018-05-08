@@ -17,7 +17,7 @@ namespace FaceRecognization
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             //Application.Run(new Main());
-            Application.Run(new Main2());
+            Application.Run(new Main());
         }
     }
 }

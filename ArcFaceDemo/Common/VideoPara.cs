@@ -40,7 +40,7 @@ namespace FaceRecognization.Common
             }
 
             p.VideoSource = new VideoCaptureDevice(videoDevices[0].MonikerString);//连接第一个摄像头
-            var videoResolution = p.VideoSource.VideoCapabilities.First(ii => ii.FrameSize.Width == p.VideoSource.VideoCapabilities.Max(jj => jj.FrameSize.Width)); //获取摄像头最高的分辨率
+            var videoResolution = p.VideoSource.VideoCapabilities[0];//.First(ii => ii.FrameSize.Width == p.VideoSource.VideoCapabilities.Max(jj => jj.FrameSize.Width)); //获取摄像头最高的分辨率
 
             p.FrameWidth = videoResolution.FrameSize.Width;
             p.FrameHeight = videoResolution.FrameSize.Height;

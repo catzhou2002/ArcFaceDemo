@@ -63,6 +63,7 @@ namespace FaceRecognization
 
         private void Main_Resize(object sender, EventArgs e)
         {
+           
             _RateH = 1.0F * this.VideoPlayer.Height / this._CameraPara.FrameHeight;
             _RateW = 1.0F * this.VideoPlayer.Width / this._CameraPara.FrameWidth;
             _FontId = new Font(this.Font.FontFamily, (int)(1.5 * this.Font.Size / System.Math.Max(_RateH, _RateW)));
@@ -107,9 +108,8 @@ namespace FaceRecognization
                     {
                         Stopwatch sw = new Stopwatch();
                         sw.Start();
-                        var img = (Bitmap)Bitmap.FromFile("d:\\photo10.bmp");
                         //var img = this.VideoPlayer.GetCurrentVideoFrame();
-                        //var img = (Bitmap)Bitmap.FromFile("d:\\photo.bmp");
+                        var img = (Bitmap)Bitmap.FromFile("d:\\photo.bmp");
 
                         ArcFace.Api.FaceMatch(img);
                         img.Dispose();
@@ -117,9 +117,9 @@ namespace FaceRecognization
                         sw.Stop();
                         _TS = sw.ElapsedMilliseconds;
                     }
-                    catch
+                    catch(System.Exception ex)
                     {
-
+                        string s = ex.Message;
                     }
                 }
             }, _CancellationTokenSource.Token);
@@ -133,7 +133,7 @@ namespace FaceRecognization
                 {
                     if (_MatchTask.Status == TaskStatus.RanToCompletion)
                         break;
-                Thread.Sleep(1000);
+                    Thread.Sleep(1000);
                 }
                 this.VideoPlayer.Stop();
 
@@ -147,12 +147,15 @@ namespace FaceRecognization
             for (int i = 0; i < ArcFace.Api.CacheFaceResults.FaceNumber; i++)
             {
                 if (string.IsNullOrEmpty(ArcFace.Api.CacheFaceResults.Items[i].ID))
+                {
                     e.Graphics.DrawRectangle(_PenFace, ArcFace.Api.CacheFaceResults[i].Rectangle);
+                    e.Graphics.DrawString(_TS + "," + ArcFace.Api.CacheFaceResults[i].Score + "," + ArcFace.Api.CacheFaceResults[i].ID, this._FontId, Brushes.White, ArcFace.Api.CacheFaceResults[i].Rectangle.Location);
+                }
                 else
                 {
                     e.Graphics.DrawRectangle(Pens.Green, ArcFace.Api.CacheFaceResults[i].Rectangle);
-                    //e.Graphics.DrawString(_TS + "," + ArcFace.MTApi.CacheFaceResults[i].Score + "," + ArcFace.MTApi.CacheFaceResults[i].ID, this._FontId, Brushes.White, ArcFace.MTApi.CacheFaceResults[i].Rectangle.Location);
-                    e.Graphics.DrawString(ArcFace.Api.CacheFaceResults[i].ID, this._FontId, Brushes.White, ArcFace.Api.CacheFaceResults[i].Rectangle.Location);
+                    e.Graphics.DrawString(_TS + "," + ArcFace.Api.CacheFaceResults[i].Score + "," + ArcFace.Api.CacheFaceResults[i].ID, this._FontId, Brushes.White, ArcFace.Api.CacheFaceResults[i].Rectangle.Location);
+                    //e.Graphics.DrawString(ArcFace.Api.CacheFaceResults[i].ID, this._FontId, Brushes.White, ArcFace.Api.CacheFaceResults[i].Rectangle.Location);
                 }
             }
         }
@@ -185,7 +188,7 @@ namespace FaceRecognization
             }
             this.TextBoxID.Text = ArcFace.Api.CacheFaceResults[_RegisterIndex].ID;
             this.groupBox1.Text = ArcFace.Api.CacheFaceResults[_RegisterIndex].Score.ToString();
-            this._RegisterFeatureData = ArcFace.Api.CacheFaceResults[_RegisterIndex].FeatureData;
+            this._RegisterFeatureData = ArcFace.Api.CacheFaceResults[_RegisterIndex].GetFeatureData();
 
             var img = this.VideoPlayer.GetCurrentVideoFrame();
             var r = ArcFace.Api.CacheFaceResults[_RegisterIndex].Rectangle;

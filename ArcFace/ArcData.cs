@@ -14,13 +14,13 @@ namespace ArcFace
     [StructLayout(LayoutKind.Sequential)]
     internal struct ImageData
     {
-        public uint u32PixelArrayFormat;
-        public int i32Width;
-        public int i32Height;
+        public uint PixelArrayFormat;
+        public int Width;
+        public int Height;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
         public IntPtr[] ppu8Plane;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4, ArraySubType = UnmanagedType.I4)]
-        public int[] pi32Pitch;
+        public int[] Pitch;
     }
 
     /// <summary>
@@ -30,9 +30,9 @@ namespace ArcFace
     internal struct DetectResult
     {
         [MarshalAs(UnmanagedType.I4)]
-        public int nFace;
-        public IntPtr rcFace;
-        public IntPtr lfaceOrient;
+        public int FaceCout;
+        public IntPtr PFaceRect;
+        public IntPtr PEFaceOrient;
     }
 
     /// <summary>
@@ -41,10 +41,10 @@ namespace ArcFace
     [StructLayout(LayoutKind.Sequential)]
     internal struct FaceRect
     {
-        public int left;
-        public int top;
-        public int right;
-        public int bottom;
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
     /// <summary>
     /// 获取人脸特征的输入参数
@@ -52,8 +52,8 @@ namespace ArcFace
     [StructLayout(LayoutKind.Sequential)]
     internal struct FaceFeatureInput
     {
-        public FaceRect rcFace;
-        public int lOrient;
+        public FaceRect FaceRect;
+        public int Orient;
     }
     /// <summary>
     /// 人脸特征
@@ -61,10 +61,11 @@ namespace ArcFace
     [StructLayout(LayoutKind.Sequential)]
     internal struct FaceModel
     {
-        public IntPtr pbFeature;
+        public IntPtr PFeature;
         [MarshalAs(UnmanagedType.I4)]
-        public int lFeatureSize;
+        public int Size;
     }
+
 
     /// <summary>
     /// 错误代码

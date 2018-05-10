@@ -34,6 +34,7 @@
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.VideoPlayer = new AForge.Controls.VideoSourcePlayer();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
@@ -92,15 +93,25 @@
             // groupBox1
             // 
             this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox1.Controls.Add(this.button1);
             this.groupBox1.Controls.Add(this.pictureBox1);
             this.groupBox1.Controls.Add(this.TextBoxID);
             this.groupBox1.Controls.Add(this.ButtonRegister);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(686, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(350, 407);
+            this.groupBox1.Size = new System.Drawing.Size(350, 487);
             this.groupBox1.TabIndex = 12;
             this.groupBox1.TabStop = false;
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(14, 407);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(320, 23);
+            this.button1.TabIndex = 11;
+            this.button1.Text = "注册";
+            this.button1.UseVisualStyleBackColor = true;
             // 
             // Main
             // 
@@ -127,5 +138,6 @@
         private System.Windows.Forms.PictureBox pictureBox1;
         private AForge.Controls.VideoSourcePlayer VideoPlayer;
         private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.Button button1;
     }
 }

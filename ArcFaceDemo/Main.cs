@@ -114,8 +114,8 @@ namespace FaceRecognization
                     {
                         Stopwatch sw = new Stopwatch();
                         sw.Start();
-                        //var img = this.VideoPlayer.GetCurrentVideoFrame();
-                        var img = (Bitmap)Bitmap.FromFile("d:\\photo.bmp");
+                        var img = this.VideoPlayer.GetCurrentVideoFrame();
+                        //var img = (Bitmap)Bitmap.FromFile("d:\\photo.bmp");
 
                         ArcFace.Api.FaceMatch(img);
                         img.Dispose();

@@ -1,4 +1,5 @@
-﻿using FaceRecognization.Common;
+﻿using AForge.Video.DirectShow;
+using FaceRecognization.Common;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -27,7 +28,10 @@ namespace FaceRecognization
         /// 虹软SDK人脸比对的Key
         /// </summary>
         const string RKey = "2Yqm2EcsJyBbJjSrirPSNoyu2Rd4j1ydfwxwFX9vPmtY";
-        CameraPara _CameraPara = null;
+        /// <summary>
+        /// 视频源
+        /// </summary>
+        VideoCaptureDevice _VideoSource = null;
         /// <summary>
         /// 摄像头获取的图片和现实的图片的宽度高度比率
         /// </summary>
@@ -63,17 +67,19 @@ namespace FaceRecognization
 
         private void Main_Resize(object sender, EventArgs e)
         {
-           
-            _RateH = 1.0F * this.VideoPlayer.Height / this._CameraPara.FrameHeight;
-            _RateW = 1.0F * this.VideoPlayer.Width / this._CameraPara.FrameWidth;
-            _FontId = new Font(this.Font.FontFamily, (int)(1.5 * this.Font.Size / System.Math.Max(_RateH, _RateW)));
+            if (_VideoSource != null)
+            {
+                _RateH = 1.0F * this.VideoPlayer.Height / this._VideoSource.VideoResolution.FrameSize.Height;
+                _RateW = 1.0F * this.VideoPlayer.Width / this._VideoSource.VideoResolution.FrameSize.Width;
+                _FontId = new Font(this.Font.FontFamily, (int)(1.5 * this.Font.Size / System.Math.Max(_RateH, _RateW)));
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            _VideoSource = Video.GetVideoSource();
             //获取摄像头参数
-            _CameraPara = Common.CameraPara.GetPara();
-            if (!_CameraPara.HasVideoDevice)
+            if (null == _VideoSource)
             {
                 MessageBox.Show("没有检测到摄像头");
                 this.Close();
@@ -86,7 +92,7 @@ namespace FaceRecognization
                 this.Close();
                 return;
             }
-            this.VideoPlayer.VideoSource = _CameraPara.VideoSource;
+            this.VideoPlayer.VideoSource = _VideoSource;
             this.VideoPlayer.Start();
 
             this.Resize += Main_Resize;
@@ -117,7 +123,7 @@ namespace FaceRecognization
                         sw.Stop();
                         _TS = sw.ElapsedMilliseconds;
                     }
-                    catch(System.Exception ex)
+                    catch (System.Exception ex)
                     {
                         string s = ex.Message;
                     }
@@ -126,7 +132,7 @@ namespace FaceRecognization
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_CameraPara.HasVideoDevice)
+            if (_VideoSource != null)
             {
                 _CancellationTokenSource.Cancel();
                 for (int i = 0; i < 10; i++)
@@ -146,7 +152,7 @@ namespace FaceRecognization
             e.Graphics.ScaleTransform(_RateW, _RateH);
             for (int i = 0; i < ArcFace.Api.CacheFaceResults.FaceNumber; i++)
             {
-                if (string.IsNullOrEmpty(ArcFace.Api.CacheFaceResults.Items[i].ID))
+                if (string.IsNullOrEmpty(ArcFace.Api.CacheFaceResults[i].ID))
                 {
                     e.Graphics.DrawRectangle(_PenFace, ArcFace.Api.CacheFaceResults[i].Rectangle);
                     e.Graphics.DrawString(_TS + "," + ArcFace.Api.CacheFaceResults[i].Score + "," + ArcFace.Api.CacheFaceResults[i].ID, this._FontId, Brushes.White, ArcFace.Api.CacheFaceResults[i].Rectangle.Location);

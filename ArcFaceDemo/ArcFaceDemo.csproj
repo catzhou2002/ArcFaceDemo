@@ -69,7 +69,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Common\VideoPara.cs" />
+    <Compile Include="Common\Video.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
     </Compile>

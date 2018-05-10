@@ -199,12 +199,12 @@ namespace ArcFace
             if (detectResult.FaceCout == 1)
             {
                 CacheFaceResults[0].FFI.FaceRect = Marshal.PtrToStructure<FaceRect>(detectResult.PFaceRect);
-                ArcWrapper.ExtractFeature(_REngine[0], ref imageData, ref CacheFaceResults[0].FFI, out var fm);
-                ArcWrapper.CopyMemory(CacheFaceResults.Items[0].FaceModel.PFeature, fm.PFeature, FeatureSize);
+                if (ArcWrapper.ExtractFeature(_REngine[0], ref imageData, ref CacheFaceResults[0].FFI, out var fm) == (int)ErrorCode.Ok)
+                    ArcWrapper.CopyMemory(CacheFaceResults.Items[0].FaceModel.PFeature, fm.PFeature, FeatureSize);
             }
             else
             {
-                Task[] ts = new Task[TaskNum<detectResult.FaceCout ?TaskNum:detectResult.FaceCout];
+                Task[] ts = new Task[TaskNum < detectResult.FaceCout ? TaskNum : detectResult.FaceCout];
                 int faceOffset = -1;
                 for (int i = 0; i < ts.Length; i++)
                 {
@@ -212,11 +212,11 @@ namespace ArcFace
                     ts[i] = Task.Factory.StartNew(() =>
                     {
                         int faceIndex = 0;
-                        while (( faceIndex = Interlocked.Increment(ref faceOffset))<detectResult.FaceCout)
+                        while ((faceIndex = Interlocked.Increment(ref faceOffset)) < detectResult.FaceCout)
                         {
                             CacheFaceResults[faceIndex].FFI.FaceRect = Marshal.PtrToStructure<FaceRect>(IntPtr.Add(detectResult.PFaceRect, faceIndex * Marshal.SizeOf<FaceRect>()));
-                            ArcWrapper.ExtractFeature(rEngine, ref imageData, ref CacheFaceResults[faceIndex].FFI, out var fm);
-                            ArcWrapper.CopyMemory(CacheFaceResults.Items[faceIndex].FaceModel.PFeature, fm.PFeature, FeatureSize);
+                            if (ArcWrapper.ExtractFeature(rEngine, ref imageData, ref CacheFaceResults[faceIndex].FFI, out var fm) == (int)ErrorCode.Ok)
+                                ArcWrapper.CopyMemory(CacheFaceResults.Items[faceIndex].FaceModel.PFeature, fm.PFeature, FeatureSize);
 
                         }
                     });

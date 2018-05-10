@@ -45,7 +45,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api.cs" />
-    <Compile Include="ArcData.cs" />
     <Compile Include="Items.cs" />
     <Compile Include="ArcWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
